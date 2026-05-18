@@ -1,0 +1,50 @@
+name: Hotel System CI Pipeline
+
+# Control de disparadores basados en los procesos de cambio del repositorio
+on:
+  push:
+    branches: [ "main", "development" ]
+  pull_request:
+    branches: [ "main", "development" ]
+
+jobs:
+  build-and-validate:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. Clonar el entorno del repositorio en la máquina virtual de GitHub
+    - name: Checkout de código fuente
+      uses: actions/checkout@v4
+
+    # 2. Configurar el entorno de ejecución para los componentes de Python
+    - name: Configurar Entorno Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    # 3. Configurar el entorno de ejecución para las pruebas complementarias de PHP
+    - name: Configurar Entorno PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: pdo_sqlite
+
+    # 4. Instalar dependencias requeridas (Módulos del Sistema Hotelero y Linters)
+    - name: Instalar dependencias y herramientas de análisis
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8
+        # Nota: El proyecto original usa Tkinter que es nativo de la biblioteca estándar de Python.
+
+    # 5. Validación Automatizada: Análisis Estático de Sintaxis Python (Linter)
+    - name: Validar sintaxis de código Python (Flake8)
+      run: |
+        # Detiene la construcción si hay errores de sintaxis (E9, F63, F7, F82)
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # Advertencias lógicas de estilo que no rompen el sistema
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+    # 6. Validación Automatizada: Análisis de Sintaxis PHP (Linter Nativo)
+    - name: Validar sintaxis de scripts PHP (Linter)
+      run: |
+        if [ -f test_db.php ]; then php -l test_db.php; fi
